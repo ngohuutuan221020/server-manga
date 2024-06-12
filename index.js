@@ -78,8 +78,6 @@ async function listFiles(authClient) {
 
   const files = res.data.files;
 
-  data.push(files);
-
   if (files.length === 0) {
     console.log("No files found.");
     return;
@@ -87,10 +85,16 @@ async function listFiles(authClient) {
 
   console.log("Files:");
   files.map((file) => {
+    data.push({
+      id: file.id,
+      name: file.name,
+      webViewLink: file.webViewLink,
+      videoMediaMetadata: file.videoMediaMetadata,
+    });
     console.log(`${file.name} (${file.id})`);
   });
+  console.log(data);
 }
-
 authorize().then(listFiles).catch(console.error);
 
 const app = express();
@@ -101,9 +105,9 @@ app.get("/", (req, res) => res.send("Express on Vercel"));
 app.get("/api", (req, res) => {
   res.json({
     success: true,
-    data: data,
+    dataAPI: data,
     message: "Get id, name, webViewLink, videoMediaMetadata ",
   });
 });
 
-app.listen(3000, () => console.log("Server ready on port 3000."));
+app.listen(3001, () => console.log("Server ready on port 3000."));
