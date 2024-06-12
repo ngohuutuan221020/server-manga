@@ -1,11 +1,15 @@
 const express = require("express");
+const cors = require("cors");
+
 const app = express();
+
+app.use(cors());
 
 app.get("/", (req, res) => res.send("Express on Vercel"));
 
 app.get("/api", (req, res) => {
   res.json({
-    success: true,
+    success: "Success",
     data: [
       {
         name: "Tuan",
