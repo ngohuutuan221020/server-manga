@@ -10,7 +10,8 @@ const SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly"];
 const TOKEN_PATH = path.join(process.cwd(), "token.json");
 const CREDENTIALS_PATH = path.join(process.cwd(), "credentials.json");
 
-const data = [];
+const app = express();
+app.use(cors());
 
 /**
  * Reads previously authorized credentials from the save file.
@@ -72,42 +73,47 @@ async function authorize() {
 async function listFiles(authClient) {
   const drive = google.drive({ version: "v3", auth: authClient });
   const res = await drive.files.list({
-    fields: "nextPageToken, files(*)",
+    fields: "nextPageToken, files(id, name, webViewLink, videoMediaMetadata)",
     q: `('1FJUeENVAUTkUcwVNv2NQQmMupmPCb3mj' in parents) and (mimeType contains 'image/' or mimeType contains 'video/')`,
   });
 
   const files = res.data.files;
 
-  if (files.length === 0) {
+  if (!files || files.length === 0) {
     console.log("No files found.");
-    return;
+    return [];
   }
 
-  console.log("Files:");
-  files.map((file) => {
-    data.push({
-      id: file.id,
-      name: file.name,
-      webViewLink: file.webViewLink,
-      videoMediaMetadata: file.videoMediaMetadata,
-    });
-    console.log(`${file.name} (${file.id})`);
-  });
-  console.log(data);
+  const data = files.map((file) => ({
+    id: file.id,
+    name: file.name,
+    webViewLink: file.webViewLink,
+    videoMediaMetadata: file.videoMediaMetadata,
+  }));
+
+  return data;
 }
-authorize().then(listFiles).catch(console.error);
 
-const app = express();
-
-app.use(cors());
 app.get("/", (req, res) => res.send("Express on Vercel"));
 
-app.get("/api", (req, res) => {
-  res.json({
-    success: true,
-    dataAPI: data,
-    message: "Get id, name, webViewLink, videoMediaMetadata ",
-  });
+app.get("/api", async (req, res) => {
+  try {
+    const authClient = await authorize();
+    const data = await listFiles(authClient);
+    console.log("🚀 ~ app.get ~ data:", data);
+    res.json({
+      success: true,
+      data: data,
+      message: "Get id, name, webViewLink, videoMediaMetadata",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving files",
+      error: error.message,
+    });
+  }
 });
 
-app.listen(3001, () => console.log("Server ready on port 3000."));
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => console.log(`Server ready on port ${PORT}.`));
